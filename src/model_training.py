@@ -7,52 +7,49 @@ from sklearn.metrics import mean_squared_error
 
 # Path handling
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_path = os.path.join(BASE_DIR, "data", "nba_games.csv")
+data_path = os.path.join(BASE_DIR, "data", "nba_betting_data.csv")
 
-# Load data
+# Load dataset
 data = pd.read_csv(data_path)
 
 # Target variable
-data["total_points"] = data["home_points"] + data["away_points"]
+data["actual_total_points"] = data["score_home"] + data["score_away"]
 
-# Feature selection
+# Sportsbook-based features
 features = [
-    "home_rebounds",
-    "away_rebounds",
-    "home_assists",
-    "away_assists",
-    "home_turnovers",
-    "away_turnovers"
+    "total",
+    "spread",
+    "moneyline_home",
+    "moneyline_away"
 ]
 
-X = data[features]
-y = data["total_points"]
+X = data[features].dropna()
+y = data.loc[X.index, "actual_total_points"]
 
 # Train-test split
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-# --------------------
-# Model 1: Linear Regression (Baseline)
-# --------------------
-lr_model = LinearRegression()
-lr_model.fit(X_train, y_train)
-lr_predictions = lr_model.predict(X_test)
-lr_mse = mean_squared_error(y_test, lr_predictions)
+# Linear Regression (baseline)
+lr = LinearRegression()
+lr.fit(X_train, y_train)
+lr_preds = lr.predict(X_test)
+lr_mse = mean_squared_error(y_test, lr_preds)
 
-# --------------------
-# Model 2: Random Forest Regressor
-# --------------------
-rf_model = RandomForestRegressor(
+# Random Forest (main model)
+rf = RandomForestRegressor(
     n_estimators=100,
-    random_state=42
+    random_state=42,
+    n_jobs=-1
 )
-rf_model.fit(X_train, y_train)
-rf_predictions = rf_model.predict(X_test)
-rf_mse = mean_squared_error(y_test, rf_predictions)
+rf.fit(X_train, y_train)
+rf_preds = rf.predict(X_test)
+rf_mse = mean_squared_error(y_test, rf_preds)
 
-# Results
-print("Model Performance (Mean Squared Error):")
+print("Model Performance (Real Betting Dataset)")
+print("----------------------------------------")
 print(f"Linear Regression MSE: {lr_mse:.2f}")
 print(f"Random Forest MSE: {rf_mse:.2f}")
+print("Training samples:", len(X_train))
+print("Testing samples:", len(X_test))
